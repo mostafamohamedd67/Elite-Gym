@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
 import { Services } from "./components/Services";
@@ -7,8 +8,29 @@ import { Trainers } from "./components/Trainers";
 import { Testimonials } from "./components/Testimonials";
 import { Contact } from "./components/Contact";
 import { Footer } from "./components/Footer";
+import { BookingConfirmation } from "./components/BookingConfirmation";
+
+type BookingDetails = {
+  name: string;
+  phone: string;
+  classItem: {
+    time: string;
+    class: string;
+    trainer: string;
+    duration: string;
+    spots: number;
+    day?: string;
+  };
+  confirmationNumber: string;
+};
 
 export default function App() {
+  const [booking, setBooking] = useState<BookingDetails | null>(null);
+
+  if (booking) {
+    return <BookingConfirmation details={booking} onBack={() => setBooking(null)} />;
+  }
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -20,7 +42,7 @@ export default function App() {
           <Services />
         </div>
         <div id="schedule">
-          <ClassSchedule />
+          <ClassSchedule onBookingComplete={setBooking} />
         </div>
         <div id="pricing">
           <Pricing />

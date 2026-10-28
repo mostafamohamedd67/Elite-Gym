@@ -3,6 +3,20 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { motion } from "motion/react";
 
 export function Hero() {
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 80; // Height of fixed header
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <section className="relative h-screen w-full overflow-hidden">
       <div className="absolute inset-0">
@@ -37,10 +51,10 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.6 }}
           className="flex flex-col sm:flex-row gap-4"
         >
-          <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg">
+          <Button size="lg" onClick={() => scrollToSection('pricing')} className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg">
             Start Free Trial
           </Button>
-          <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-black px-8 py-6 text-lg">
+          <Button size="lg" variant="outline" onClick={() => scrollToSection('schedule')} className="bg-transparent dark:bg-transparent border-white text-white hover:bg-white hover:text-black px-8 py-6 text-lg">
             View Classes
           </Button>
         </motion.div>

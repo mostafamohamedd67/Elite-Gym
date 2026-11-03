@@ -52,7 +52,7 @@ export function Hero() {
           className="flex flex-col sm:flex-row gap-4"
         >
           <Button size="lg" onClick={() => scrollToSection('pricing')} className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg">
-            Start Free Trial
+            Join now
           </Button>
           <Button size="lg" variant="outline" onClick={() => scrollToSection('schedule')} className="bg-transparent dark:bg-transparent border-white text-white hover:bg-white hover:text-black px-8 py-6 text-lg">
             View Classes

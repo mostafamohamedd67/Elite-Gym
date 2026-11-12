@@ -339,7 +339,7 @@ export function ClassSchedule({ onBookingComplete }: Props) {
               </div>
 
               <p role="status" className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                Demo, no payment taken. {METHOD_LABEL[method]} is shown for illustration only.
+                Demo, no payment taken.
               </p>
 
               <div className="flex gap-3 pt-1">

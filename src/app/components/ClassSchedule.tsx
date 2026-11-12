@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Clock, Users, CreditCard, User, Phone, Lock } from "lucide-react";
+import { Clock, Users, User, Phone, Banknote, Loader2 } from "lucide-react";
+import { BRAND_MARKS } from "./brandMarks";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -28,11 +29,25 @@ type BookingDetails = {
   phone: string;
   classItem: ClassItem;
   confirmationNumber: string;
+  paymentMethod?: string;
+  amount?: string;
 };
 
 type Props = {
   onBookingComplete: (details: BookingDetails) => void;
 };
+
+
+type MethodId = "card" | "paypal" | "wallet" | "gym";
+
+function Mark({ k, h = 22 }: { k: keyof typeof BRAND_MARKS; h?: number }) {
+  const m = BRAND_MARKS[k];
+  return (
+    <svg viewBox="0 0 24 24" role="img" aria-hidden="true" className="shrink-0" style={{ height: h, width: h }}>
+      <path d={m.d} fill={m.color} />
+    </svg>
+  );
+}
 
 const schedule = {
   Monday: [
@@ -92,11 +107,9 @@ export function ClassSchedule({ onBookingComplete }: Props) {
   const [selectedDay, setSelectedDay] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [method, setMethod] = useState<MethodId>("card");
+  const [processing, setProcessing] = useState(false);
 
   function openBooking(classItem: ClassItem, day: string) {
     setSelectedClass({ ...classItem, day });
@@ -104,24 +117,12 @@ export function ClassSchedule({ onBookingComplete }: Props) {
     setStep(1);
     setName("");
     setPhone("");
-    setCardNumber("");
-    setCardName("");
-    setExpiry("");
-    setCvv("");
     setErrors({});
+    setMethod("card");
+    setProcessing(false);
     setOpen(true);
   }
 
-  function formatCardNumber(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 16);
-    return digits.replace(/(.{4})/g, "$1 ").trim();
-  }
-
-  function formatExpiry(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 4);
-    if (digits.length >= 3) return digits.slice(0, 2) + "/" + digits.slice(2);
-    return digits;
-  }
 
   function validateStep1() {
     const e: Record<string, string> = {};
@@ -132,32 +133,41 @@ export function ClassSchedule({ onBookingComplete }: Props) {
     return Object.keys(e).length === 0;
   }
 
-  function validateStep2() {
-    const e: Record<string, string> = {};
-    const rawCard = cardNumber.replace(/\s/g, "");
-    if (rawCard.length !== 16) e.cardNumber = "Enter a valid 16-digit card number";
-    if (!cardName.trim()) e.cardName = "Name on card is required";
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) e.expiry = "Enter expiry as MM/YY";
-    if (!/^\d{3,4}$/.test(cvv)) e.cvv = "Enter a valid CVV";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
 
   function handleNextStep() {
     if (validateStep1()) setStep(2);
   }
 
+  const METHOD_LABEL: Record<MethodId, string> = {
+    card: "Card (Stripe)",
+    paypal: "PayPal",
+    wallet: "Apple Pay / Google Pay",
+    gym: "Pay at the gym",
+  };
+
   function handlePay() {
-    if (!validateStep2() || !selectedClass) return;
-    const confirmationNumber = "GYM-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    onBookingComplete({
-      name,
-      phone,
-      classItem: { ...selectedClass, day: selectedDay },
-      confirmationNumber,
-    });
-    setOpen(false);
+    if (processing || !selectedClass) return;
+    setProcessing(true);
+    // Demo only: no payment SDK, no charge. Short simulated hand-off, then the confirmation screen.
+    window.setTimeout(() => {
+      const confirmationNumber = "GYM-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      onBookingComplete({
+        name,
+        phone,
+        classItem: { ...selectedClass, day: selectedDay },
+        confirmationNumber,
+        paymentMethod: METHOD_LABEL[method],
+      });
+      setProcessing(false);
+      setOpen(false);
+    }, 1400);
   }
+
+  const payLabel =
+    method === "paypal" ? "Continue with PayPal"
+    : method === "wallet" ? "Pay with Apple Pay / Google Pay"
+    : method === "gym" ? "Reserve, pay at the gym"
+    : "Pay now";
 
   return (
     <section className="py-20 bg-gray-50">
@@ -286,94 +296,64 @@ export function ClassSchedule({ onBookingComplete }: Props) {
             <>
               <DialogHeader>
                 <DialogTitle className="text-xl">Payment</DialogTitle>
-                <DialogDescription>
-                  Enter your card details to confirm booking
-                </DialogDescription>
+                <DialogDescription>Choose how you would like to pay</DialogDescription>
               </DialogHeader>
 
-              {/* Card preview */}
-              <div className="rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 text-white p-5 space-y-3">
-                <div className="flex justify-between items-start">
-                  <CreditCard className="size-6" />
-                  <span className="text-xs opacity-60 uppercase tracking-widest">Credit Card</span>
-                </div>
-                <p className="font-mono text-lg tracking-widest">
-                  {cardNumber || "•••• •••• •••• ••••"}
-                </p>
-                <div className="flex justify-between text-sm">
-                  <span className="opacity-70">{cardName || "YOUR NAME"}</span>
-                  <span className="opacity-70">{expiry || "MM/YY"}</span>
+              {/* Order summary */}
+              <div className="flex items-center justify-between rounded-lg border bg-gray-50 px-4 py-3 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{selectedClass?.class}</p>
+                  <p className="text-gray-500">{selectedDay}, {selectedClass?.time}</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="cardNumber">Card Number</Label>
-                  <Input
-                    id="cardNumber"
-                    placeholder="1234 5678 9012 3456"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                    aria-invalid={!!errors.cardNumber}
-                  />
-                  {errors.cardNumber && <p className="text-sm text-red-600">{errors.cardNumber}</p>}
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="cardName">Name on Card</Label>
-                  <Input
-                    id="cardName"
-                    placeholder="John Doe"
-                    value={cardName}
-                    onChange={(e) => setCardName(e.target.value)}
-                    aria-invalid={!!errors.cardName}
-                  />
-                  {errors.cardName && <p className="text-sm text-red-600">{errors.cardName}</p>}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="expiry">Expiry Date</Label>
-                    <Input
-                      id="expiry"
-                      placeholder="MM/YY"
-                      value={expiry}
-                      onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                      aria-invalid={!!errors.expiry}
-                    />
-                    {errors.expiry && <p className="text-sm text-red-600">{errors.expiry}</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cvv">CVV</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                      <Input
-                        id="cvv"
-                        placeholder="•••"
-                        className="pl-9"
-                        maxLength={4}
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        aria-invalid={!!errors.cvv}
-                      />
-                    </div>
-                    {errors.cvv && <p className="text-sm text-red-600">{errors.cvv}</p>}
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-1">
-                  <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
-                    Back
-                  </Button>
-                  <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handlePay}>
-                    Pay Now
-                  </Button>
-                </div>
-
-                <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1">
-                  <Lock className="size-3" /> Secured by 256-bit SSL encryption
-                </p>
+              <div role="radiogroup" aria-label="Payment method" className="space-y-2">
+                {([
+                  { id: "card", label: "Credit or debit card", sub: "Powered by Stripe", icon: <Mark k="stripe" h={24} /> },
+                  { id: "paypal", label: "PayPal", sub: "Pay with your PayPal account", icon: <Mark k="paypal" h={24} /> },
+                  { id: "wallet", label: "Apple Pay / Google Pay", sub: "One tap on your phone", icon: <span className="flex items-center gap-2"><Mark k="applepay" h={28} /><Mark k="googlepay" h={28} /></span> },
+                  { id: "gym", label: "Pay at the gym", sub: "Cash or card at reception", icon: <Banknote className="size-6 text-gray-700" /> },
+                ] as { id: MethodId; label: string; sub: string; icon: React.ReactNode }[]).map((m) => {
+                  const selected = method === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={processing}
+                      onClick={() => setMethod(m.id)}
+                      className={`w-full flex items-center gap-3 rounded-lg border px-4 min-h-14 py-2 text-left transition-colors ${selected ? "border-red-600 bg-red-50/40" : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                    >
+                      <span className={`flex items-center justify-center size-5 rounded-full border shrink-0 ${selected ? "border-red-600" : "border-gray-300"}`}>
+                        {selected && <span className="size-2.5 rounded-full bg-red-600" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-gray-900">{m.label}</span>
+                        <span className="block text-xs text-gray-500">{m.sub}</span>
+                      </span>
+                      <span className="shrink-0 flex items-center justify-end min-w-8">{m.icon}</span>
+                    </button>
+                  );
+                })}
               </div>
+
+              <p role="status" className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                Demo, no payment taken. {METHOD_LABEL[method]} is shown for illustration only.
+              </p>
+
+              <div className="flex gap-3 pt-1">
+                <Button variant="outline" className="flex-1" disabled={processing} onClick={() => setStep(1)}>
+                  Back
+                </Button>
+                <Button className="flex-[2] bg-red-600 hover:bg-red-700" disabled={processing} onClick={handlePay}>
+                  {processing ? (<><Loader2 className="size-4 animate-spin" /> Processing…</>) : payLabel}
+                </Button>
+              </div>
+
+              <p className="text-center text-xs text-gray-400">
+                Demo checkout: no payment is taken and no card data is stored.
+              </p>
             </>
           )}
         </DialogContent>

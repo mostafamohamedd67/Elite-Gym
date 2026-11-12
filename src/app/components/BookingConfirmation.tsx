@@ -14,6 +14,8 @@ type BookingDetails = {
     day?: string;
   };
   confirmationNumber: string;
+  paymentMethod?: string;
+  amount?: string;
 };
 
 type Props = {
@@ -22,7 +24,7 @@ type Props = {
 };
 
 export function BookingConfirmation({ details, onBack }: Props) {
-  const { name, phone, classItem, confirmationNumber } = details;
+  const { name, phone, classItem, confirmationNumber, paymentMethod, amount } = details;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-16">
@@ -80,6 +82,15 @@ export function BookingConfirmation({ details, onBack }: Props) {
                 </div>
               </div>
 
+              {paymentMethod && (
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                  <div>
+                    <p className="text-gray-500">Payment method</p>
+                    <p className="font-medium text-gray-900">{paymentMethod}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center size-8 rounded-full bg-gray-100">
@@ -104,6 +115,10 @@ export function BookingConfirmation({ details, onBack }: Props) {
             </div>
           </CardContent>
         </Card>
+
+        <p className="text-center text-xs text-gray-500">
+          Demo booking: no payment was taken.
+        </p>
 
         <Button
           variant="outline"

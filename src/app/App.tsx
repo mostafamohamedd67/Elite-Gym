@@ -22,6 +22,8 @@ type BookingDetails = {
     day?: string;
   };
   confirmationNumber: string;
+  paymentMethod?: string;
+  amount?: string;
 };
 
 export default function App() {
